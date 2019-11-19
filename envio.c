@@ -7,7 +7,7 @@
 #include <netinet/ether.h>
 #include <arpa/inet.h>
 #include <linux/if_packet.h>
-#include "checksum/checksum.h";
+#include "checksum/checksum.h"
 
 #define MAC_ADDR_LEN 6
 #define BUFFER_SIZE 1600
@@ -121,28 +121,28 @@ int main(int argc, char *argv[])
 	frame_len += sizeof(ethertype);
 
 	/* */
-	memcpy(buffer + frame_len, 0x45, 4);
+	memcpy(buffer + frame_len, &0x45, 4);
 	frame_len += 4;
 
-	memcpy(buffer + frame_len, 0x00, 4);
+	memcpy(buffer + frame_len, &0x00, 4);
 	frame_len += 4;
 
-	memcpy(buffer + frame_len, htons(512), 16);
+	memcpy(buffer + frame_len, &htons(512), 16);
 	frame_len += 16;
 	
-	memcpy(buffer + frame_len, htons(0x00), 16);
+	memcpy(buffer + frame_len, &htons(0x00), 16);
 	frame_len += 16;
 
-	memcpy(buffer + frame_len, htons(0x00), 16);
+	memcpy(buffer + frame_len, &htons(0x00), 16);
 	frame_len += 16;
 
-	memcpy(buffer + frame_len, 50, 8);
+	memcpy(buffer + frame_len, &50, 8);
 	frame_len += 8;
 
-	memcpy(buffer + frame_len, 17, 8);
+	memcpy(buffer + frame_len, &17, 8);
 	frame_len += 8;
 
-	memcpy(buffer + frame_len, htons(0x0000), 16);
+	memcpy(buffer + frame_len, &htons(0x0000), 16);
 	frame_len += 16;
 
 	/* sender Ethernet addr */
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	frame_len += sizeof(dest_ip);
 
 	/* ip checksum */
-	memcpy(buffer+frame_len, htons((~ipchksum((uint8_t *)&buffer_u.cooked_data.payload.ip) & 0xffff)), 16);
+	memcpy(buffer+frame_len, &htons(0x0000), 16);
 	frame_len += 16;
 
 	/* UDP header */
