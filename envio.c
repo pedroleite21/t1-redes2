@@ -14,6 +14,23 @@
 #define ETHERTYPE 0x0806
 #define REPLY 0X0002
 
+struct udp_header
+{
+	uint16_t src_port;
+	uint16_t dst_port;
+	uint16_t udp_len;
+	uint16_t udp_chksum;
+};
+
+struct app
+{
+	uint16_t id;
+	uint8_t control;
+	uint8_t padd;
+	uint8_t data[512];
+	uint16_t app_checksum;
+};
+
 int main(int argc, char *argv[])
 {
 	int fd;
@@ -36,8 +53,13 @@ int main(int argc, char *argv[])
 	short int operation = htons(0x0001);
 
 	char orig_ip[] = {192, 168, 1, 187};
-	
-	char dest_ip[] = {192, 168, 1, 48};
+
+	char dest_ip[] = {192, 168, 1, 187};
+
+	short int source_port = htons(54323);
+	short int dest_port = htons(54321);
+	short int length = htons(sizeof(struct udp_header));
+	short int checksum = 0;
 
 	if (argc != 2)
 	{
@@ -129,70 +151,74 @@ int main(int argc, char *argv[])
 	memcpy(buffer, dest_mac, MAC_ADDR_LEN);
 	frame_len += MAC_ADDR_LEN;
 
-	 dest_ip[0] = orig_ip[0];
-	 dest_ip[1] = orig_ip[1];
-	 dest_ip[2] = orig_ip[2];
-	// dest_ip[3] = orig_ip[3];
+	dest_ip[0] = orig_ip[0];
+	dest_ip[1] = orig_ip[1];
+	dest_ip[2] = orig_ip[2];
+	dest_ip[3] = orig_ip[3];
 
-	int i = 0;
-	for (i = 1; i < 255; i++) {
+	memcpy(buffer + frame_len, dest_ip, sizeof(dest_ip));
+	frame_len += sizeof(dest_ip);
 
-		if (i == orig_ip[3])
-			continue;
+	/* ip checksum */
 
-		dest_ip[3] = i;
+	/* UDP header */
+	memcpy(buffer + frame_len, &source_port, sizeof(source_port));
+	frame_len += sizeof(source_port);
 
-		memcpy(buffer + frame_len, dest_ip, sizeof(dest_ip));
-		frame_len += sizeof(dest_ip);
+	memcpy(buffer + frame_len, &dest_port, sizeof(dest_port));
+	frame_len += sizeof(dest_port);
 
-		if (sendto(fd, buffer, frame_len, 0, (struct sockaddr *)&socket_address, sizeof(struct sockaddr_ll)) < 0)
-		{
-			perror("send");
-			close(fd);
-			exit(1);
-		}
+	memcpy(buffer + frame_len, &length, sizeof(length));
+	frame_len += sizeof(length);
 
-		frame_len -= sizeof(dest_ip);
+	memcpy(buffer + frame_len, &checksum, sizeof(checksum));
+	frame_len += sizeof(checksum);
+
+	if (sendto(fd, buffer, frame_len, 0, (struct sockaddr *)&socket_address, sizeof(struct sockaddr_ll)) < 0)
+	{
+		perror("send");
+		close(fd);
+		exit(1);
 	}
 
 	printf("Pacotes enviados.\n");
 	printf("Esperando replys...\n\n");
 	unsigned char *reply;
 
-	while(1) {
+	while (1)
+	{
 		unsigned char mac_dst[6];
 		unsigned char mac_src[6];
 		unsigned char ip_src[4];
 		unsigned char ip_dst[4];
 		short int ethertype;
 		short int oprecieve;
-		
 
 		/* Recebe pacotes */
-		if (recv(fd,(char *) &buffer, BUFFER_SIZE, 0) < 0) {
+		if (recv(fd, (char *)&buffer, BUFFER_SIZE, 0) < 0)
+		{
 			perror("recv");
 			close(fd);
 			exit(1);
 		}
 
 		memcpy(mac_dst, buffer, sizeof(mac_dst));
-		memcpy(mac_src, buffer+sizeof(mac_dst), sizeof(mac_src));
-		memcpy(&ethertype, buffer+sizeof(mac_dst)+sizeof(mac_src), sizeof(ethertype));
+		memcpy(mac_src, buffer + sizeof(mac_dst), sizeof(mac_src));
+		memcpy(&ethertype, buffer + sizeof(mac_dst) + sizeof(mac_src), sizeof(ethertype));
 		ethertype = ntohs(ethertype);
-		reply = (buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype));
-		
-		memcpy(&oprecieve,reply+6, sizeof(oprecieve));
-		oprecieve = ntohs(oprecieve);
-		
-		memcpy(ip_src, reply+14, sizeof(ip_src));
+		reply = (buffer + sizeof(mac_dst) + sizeof(mac_src) + sizeof(ethertype));
 
-		memcpy(ip_dst, reply+24, sizeof(ip_dst));
-		if (ethertype == ETHERTYPE && oprecieve == 2
-			&& (orig_ip[0] == ip_dst[0] && orig_ip[1] == ip_dst[1] && orig_ip[2] == ip_dst[2] && orig_ip[3] == ip_dst[3])
-		) {
+		memcpy(&oprecieve, reply + 6, sizeof(oprecieve));
+		oprecieve = ntohs(oprecieve);
+
+		memcpy(ip_src, reply + 14, sizeof(ip_src));
+
+		memcpy(ip_dst, reply + 24, sizeof(ip_dst));
+		if (ethertype == ETHERTYPE && oprecieve == 2 && (orig_ip[0] == ip_dst[0] && orig_ip[1] == ip_dst[1] && orig_ip[2] == ip_dst[2] && orig_ip[3] == ip_dst[3]))
+		{
 			printf("IP: %d.%d.%d.%d\t", ip_src[0], ip_src[1], ip_src[2], ip_src[3]);
-			printf("MAC origem:  %02x:%02x:%02x:%02x:%02x:%02x\n", 
-                        mac_src[0], mac_src[1], mac_src[2], mac_src[3], mac_src[4], mac_src[5]);
+			printf("MAC origem:  %02x:%02x:%02x:%02x:%02x:%02x\n",
+				   mac_src[0], mac_src[1], mac_src[2], mac_src[3], mac_src[4], mac_src[5]);
 			printf("\n");
 		}
 	}
@@ -200,4 +226,3 @@ int main(int argc, char *argv[])
 	close(fd);
 	return 0;
 }
-
