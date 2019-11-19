@@ -120,25 +120,30 @@ int main(int argc, char *argv[])
 	memcpy(buffer + frame_len, &ethertype, sizeof(ethertype));
 	frame_len += sizeof(ethertype);
 
-	/* Preenche o campo hard type */
-	memcpy(buffer + frame_len, &hardtype, sizeof(hardtype));
-	frame_len += sizeof(hardtype);
+	/* */
+	memcpy(buffer + frame_len, 0x45, 4);
+	frame_len += 4;
 
-	/* prop type */
-	memcpy(buffer + frame_len, &proptype, sizeof(proptype));
-	frame_len += sizeof(proptype);
+	memcpy(buffer + frame_len, 0x00, 4);
+	frame_len += 4;
 
-	/* hard size */
-	memcpy(buffer + frame_len, &hardsize, sizeof(hardsize));
-	frame_len += sizeof(hardsize);
+	memcpy(buffer + frame_len, htons(512), 16);
+	frame_len += 16;
+	
+	memcpy(buffer + frame_len, htons(0x00), 16);
+	frame_len += 16;
 
-	/* prop size */
-	memcpy(buffer + frame_len, &propsize, sizeof(propsize));
-	frame_len += sizeof(propsize);
+	memcpy(buffer + frame_len, htons(0x00), 16);
+	frame_len += 16;
 
-	/* op */
-	memcpy(buffer + frame_len, &operation, sizeof(operation));
-	frame_len += sizeof(operation);
+	memcpy(buffer + frame_len, 50, 8);
+	frame_len += 8;
+
+	memcpy(buffer + frame_len, 17, 8);
+	frame_len += 8;
+
+	memcpy(buffer + frame_len, htons(0x0000), 16);
+	frame_len += 16;
 
 	/* sender Ethernet addr */
 	memcpy(buffer + frame_len, if_mac.ifr_hwaddr.sa_data, MAC_ADDR_LEN);
@@ -161,7 +166,6 @@ int main(int argc, char *argv[])
 	frame_len += sizeof(dest_ip);
 
 	/* ip checksum */
-
 	memcpy(buffer+frame_len, htons((~ipchksum((uint8_t *)&buffer_u.cooked_data.payload.ip) & 0xffff)), 16);
 	frame_len += 16;
 
